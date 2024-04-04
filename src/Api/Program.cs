@@ -1,8 +1,6 @@
-using Api;
 using Api.Database;
+using Api.Features.Movies;
 using Api.TestContainers;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,39 +22,20 @@ if (currentTestContainersConfig.Enabled)
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-async Task<Created<Movie>> CreateMovie(Movie movie, DatabaseContext context)
-{
-    context.Movies.Add(movie);
-    await context.SaveChangesAsync();
-    return TypedResults.Created($"/movies/{movie.Id}", movie);
-}
-
-async Task<Ok<List<Movie>>> GetMovies(DatabaseContext context)
-{
-    var movies = await context.Movies.ToListAsync();
-    return TypedResults.Ok(movies);
-}
-
-async Task<Ok<Movie>> GetMovie(Guid id, DatabaseContext context)
-{
-    var movie = await context.Movies.FindAsync(id);
-    return TypedResults.Ok(movie);
-}
+app.UseSwagger()
+    .UseSwaggerUI(opts =>
+    {
+        if (app.Environment.IsDevelopment())
+        {
+            opts.EnableTryItOutByDefault();
+        }
+    });
 
 var movies = app.MapGroup("/movies")
     .WithOpenApi();
 
-movies.MapPost("/", CreateMovie);
-movies.MapGet("/", GetMovies);
-movies.MapGet("/{id}", GetMovie);
+movies.MapPost("/", CreateMovie.Endpoint);
+movies.MapGet("/", GetMovies.Endpoint);
+movies.MapGet("/{id}", GetMovie.Endpoint);
 
 app.Run();
-
-public record Movie(Guid Id, string Title, int Year);

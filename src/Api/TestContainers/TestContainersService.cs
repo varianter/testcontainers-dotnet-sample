@@ -1,3 +1,5 @@
+using Api.Database;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Testcontainers.PostgreSql;
 
@@ -39,6 +41,21 @@ public class TestContainersService(IServiceProvider serviceProvider) : IHostedSe
                     .Build();
 
                 await _postgreSqlContainer.StartAsync(cancellationToken);
+            }
+
+            if (config.RunMigrations)
+            {
+                await using var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+                
+                var retries = 0;
+                while (!await context.Database.CanConnectAsync(cancellationToken) && retries < 10)
+                {
+                    retries++;
+                    await Task.Delay(1000, cancellationToken);
+                }
+
+                logger.LogInformation("Running database migrations");
+                await context.Database.MigrateAsync(cancellationToken); 
             }
         } catch (Exception ex)
         {

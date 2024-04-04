@@ -5,6 +5,7 @@ public record TestContainersConfig
     public const string SectionName = "TestContainers";
     
     public required bool Enabled { get; set; }
+    public required bool RunMigrations { get; set; }
 }
 
 internal static class TestContainersConfigExtensions
