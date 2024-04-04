@@ -14,7 +14,7 @@ internal static class TestContainersConfigExtensions
     {
         var configurationSection = builder.Configuration.GetSection(TestContainersConfig.SectionName);
         builder.Services.Configure<TestContainersConfig>(configurationSection);
-        currentConfig = configurationSection.Get<TestContainersConfig>();
+        currentConfig = configurationSection.Get<TestContainersConfig>()!;
         return builder;
     }
 }

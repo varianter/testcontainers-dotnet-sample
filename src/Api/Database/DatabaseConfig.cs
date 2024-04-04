@@ -3,7 +3,8 @@ namespace Api.Database;
 public record DatabaseConfig
 {
     public const string SectionName = "Database";
-    public string ConnectionString { get; set; }
+    public required string ConnectionString { get; set; }
+    public required bool EnableSensitiveDataLogging { get; set; }
 }
 
 internal static class DatabaseConfigExtensions

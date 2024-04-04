@@ -7,65 +7,39 @@ namespace Api.TestContainers;
 
 public class TestContainersService(IServiceProvider serviceProvider) : IHostedService
 {
-    private const string DatabaseName = "test";
-    private const string Username = "test";
-    private const string Password = "test123###!";
-    private const int HostPort = 51234;
-
-    public static readonly string ConnectionString =
-        $"Host=127.0.0.1;Port={HostPort};Database={DatabaseName};Username={Username};Password={Password}";
+    private TestContainers? _testContainers;
     
-    private PostgreSqlContainer? _postgreSqlContainer;
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
 
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<TestContainersService>>();
+        
         try
         {
-            logger.LogInformation("Running ephemeral environment service");
+            logger.LogInformation("Running test containers service");
+            
             var config = scope.ServiceProvider.GetRequiredService<IOptions<TestContainersConfig>>().Value;
 
             if (config.Enabled)
             {
-                logger.LogInformation("Starting TestContainers");
-                _postgreSqlContainer = new PostgreSqlBuilder()
-                    .WithName("testcontainers-sample-db")
-                    .WithLabel("reuse-id", "testcontainers-sample-db")
-                    .WithReuse(true)
-                    .WithDatabase(DatabaseName)
-                    .WithUsername(Username)
-                    .WithPassword(Password)
-                    .WithPortBinding(HostPort, 5432)
-                    .Build();
+                var testContainersLogger = scope.ServiceProvider.GetRequiredService<ILogger<TestContainers>>();
+                _testContainers = new TestContainers(config, testContainersLogger);
 
-                await _postgreSqlContainer.StartAsync(cancellationToken);
+                await _testContainers.Start(cancellationToken);
             }
-
-            if (config.RunMigrations)
-            {
-                await using var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-                
-                var retries = 0;
-                while (!await context.Database.CanConnectAsync(cancellationToken) && retries < 10)
-                {
-                    retries++;
-                    await Task.Delay(1000, cancellationToken);
-                }
-
-                logger.LogInformation("Running database migrations");
-                await context.Database.MigrateAsync(cancellationToken); 
-            }
-        } catch (Exception ex)
-        {
-            logger.LogError(ex, "Error starting TestContainers");
         }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to start test containers service");
+            throw;
+        }
+
+        logger.LogInformation("Finished running test containers service");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        var stopTask = _postgreSqlContainer?.StopAsync(cancellationToken) ?? Task.CompletedTask;
-        return stopTask;
+        return _testContainers?.Stop(cancellationToken) ?? Task.CompletedTask;
     }
 }

@@ -39,3 +39,6 @@ movies.MapGet("/", GetMovies.Endpoint);
 movies.MapGet("/{id}", GetMovie.Endpoint);
 
 app.Run();
+
+// Make available for testing:
+public partial class Program { }
