@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Diagnostics;
 using Api.Database;
 using Api.TestContainers;
@@ -9,13 +10,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Npgsql;
+using Respawn;
 
 namespace Api.Tests.Shared;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public TestContainers.TestContainers TestContainers { get; private set; } = default!;
+    public DatabaseContext DatabaseContext { get; private set; } = default!;
     public HttpClient HttpClient { get; private set; } = default!;
+    
+    private DbConnection _dbConnection = default!;
+    private Respawner _respawner = default!;
+
 
     public async Task InitializeAsync()
     {
@@ -31,7 +40,27 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             DatabaseTestContainerName = "testcontainers-sample-api-tests-db",
             HostPort = 51235
         });
+        DatabaseContext = new DatabaseContext(Options.Create(new DatabaseConfig
+        {
+            ConnectionString = TestContainers.CurrentConnectionString ?? throw new UnreachableException(),
+            EnableSensitiveDataLogging = true
+        }), NullLoggerFactory.Instance);
+        
         HttpClient = CreateClient();
+        
+        _dbConnection = new NpgsqlConnection(TestContainers.CurrentConnectionString);
+        await _dbConnection.OpenAsync();
+
+        _respawner = await Respawner.CreateAsync(_dbConnection, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.Postgres,
+            SchemasToInclude = ["public"],
+        });
+    }
+    
+    public Task ResetDatabaseAsync()
+    {
+        return _respawner.ResetAsync(_dbConnection);
     }
 
     public new Task DisposeAsync()

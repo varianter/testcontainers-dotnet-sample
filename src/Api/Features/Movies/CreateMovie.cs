@@ -10,7 +10,12 @@ public static class CreateMovie
 {
     public static async Task<Created> Endpoint([FromBody] CreateMovieRequest request, DatabaseContext context, CancellationToken ct)
     {
-        var movie = new Movie(Guid.NewGuid(), request.Title, request.Year);
+        var movie = new Movie 
+        {
+            Id = Guid.NewGuid(),
+            Title = request.Title,
+            Year = request.Year
+        };
 
         context.Movies.Add(movie);
         await context.SaveChangesAsync(ct);
