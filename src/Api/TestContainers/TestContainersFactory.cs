@@ -6,7 +6,7 @@ using Testcontainers.PostgreSql;
 
 namespace Api.TestContainers;
 
-public class TestContainers(TestContainersConfig config, ILogger<TestContainers> logger)
+public class TestContainersFactory(TestContainersConfig config, ILogger<TestContainersFactory> logger)
 {
     private const string DatabaseName = "test";
     private const string Username = "test";
@@ -24,8 +24,6 @@ public class TestContainers(TestContainersConfig config, ILogger<TestContainers>
     {
         try
         {
-            logger.LogInformation("Running ephemeral environment service");
-
             if (config.Enabled)
             {
                 var hostPort = overrides?.HostPort ?? HostPort;

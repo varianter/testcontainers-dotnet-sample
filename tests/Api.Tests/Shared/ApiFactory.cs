@@ -18,7 +18,7 @@ namespace Api.Tests.Shared;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public TestContainers.TestContainers TestContainers { get; private set; } = default!;
+    public TestContainers.TestContainersFactory TestContainersFactory { get; private set; } = default!;
     public DatabaseContext DatabaseContext { get; private set; } = default!;
     public HttpClient HttpClient { get; private set; } = default!;
     
@@ -34,21 +34,21 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             RunMigrations = true
         };
         
-        TestContainers = new TestContainers.TestContainers(config, NullLogger<TestContainers.TestContainers>.Instance);
-        await TestContainers.Start(overrides: new TestContainersOverrides
+        TestContainersFactory = new TestContainers.TestContainersFactory(config, NullLogger<TestContainers.TestContainersFactory>.Instance);
+        await TestContainersFactory.Start(overrides: new TestContainersOverrides
         {
             DatabaseTestContainerName = "testcontainers-sample-api-tests-db",
             HostPort = 51235
         });
         DatabaseContext = new DatabaseContext(Options.Create(new DatabaseConfig
         {
-            ConnectionString = TestContainers.CurrentConnectionString ?? throw new UnreachableException(),
+            ConnectionString = TestContainersFactory.CurrentConnectionString ?? throw new UnreachableException(),
             EnableSensitiveDataLogging = true
         }), NullLoggerFactory.Instance);
         
         HttpClient = CreateClient();
         
-        _dbConnection = new NpgsqlConnection(TestContainers.CurrentConnectionString);
+        _dbConnection = new NpgsqlConnection(TestContainersFactory.CurrentConnectionString);
         await _dbConnection.OpenAsync();
 
         _respawner = await Respawner.CreateAsync(_dbConnection, new RespawnerOptions
@@ -66,7 +66,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public new Task DisposeAsync()
     {
         HttpClient.Dispose();
-        return TestContainers.Stop();
+        return TestContainersFactory.Stop();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -81,7 +81,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll(typeof(TestContainersService));
             services.Configure<DatabaseConfig>(options =>
             {
-                options.ConnectionString = TestContainers.CurrentConnectionString ?? throw new UnreachableException();
+                options.ConnectionString = TestContainersFactory.CurrentConnectionString ?? throw new UnreachableException();
             });
         });
     }

@@ -15,7 +15,7 @@ public static class TestContainersHostBuilder
         builder.Services.Configure<DatabaseConfig>(
             opts =>
             {
-                opts.ConnectionString = TestContainers.DefaultDbConnectionString;
+                opts.ConnectionString = TestContainersFactory.DefaultDbConnectionString;
             });
     }
 

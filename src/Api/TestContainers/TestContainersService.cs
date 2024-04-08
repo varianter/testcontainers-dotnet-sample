@@ -1,13 +1,11 @@
 using Api.Database;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Testcontainers.PostgreSql;
 
 namespace Api.TestContainers;
 
 public class TestContainersService(IServiceProvider serviceProvider) : IHostedService
 {
-    private TestContainers? _testContainers;
+    private TestContainersFactory? _testContainers;
     
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -23,8 +21,8 @@ public class TestContainersService(IServiceProvider serviceProvider) : IHostedSe
 
             if (config.Enabled)
             {
-                var testContainersLogger = scope.ServiceProvider.GetRequiredService<ILogger<TestContainers>>();
-                _testContainers = new TestContainers(config, testContainersLogger);
+                var testContainersLogger = scope.ServiceProvider.GetRequiredService<ILogger<TestContainersFactory>>();
+                _testContainers = new TestContainersFactory(config, testContainersLogger);
 
                 await _testContainers.Start(cancellationToken);
             }
